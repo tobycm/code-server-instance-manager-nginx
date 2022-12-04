@@ -1,0 +1,6 @@
+{
+    "mypy.runUsingActiveInterpreter": true,
+    "mypy.dmypyExecutable": ".venv/bin/dmypy",
+    "python.analysis.typeCheckingMode": "basic",
+    "codetogether.virtualCursorJoin": "sharedVirtualCursor"
+}

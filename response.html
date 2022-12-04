@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta id="session_id" content="%pls-replace-me%">
+    <title>Intermission</title>
+</head>
+<body onload="load()">
+    <script>
+        function setCookie() {
+            const session_id = document.getElementById("session_id").getAttribute("content");
+            const date = new Date();
+            const expire_days = 2;
+            date.setTime(date.getTime() + (expire_days * 24 * 60 * 60 * 1000));
+            let expires = "expires="+ date.toUTCString();
+            document.cookie = "session_id=" + session_id + ";" + expires + ";domain=.tobycm.ga;path=/";
+        }
+
+        function redirectUser() {
+            window.location.replace("https://vscode.tobycm.ga");
+        }
+
+        function load() {
+            setCookie();
+            redirectUser();
+        }
+    </script>
+    
+</body>
+</html>

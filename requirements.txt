@@ -1,0 +1,5 @@
+aiohttp
+google_auth_oauthlib
+uvicorn
+fastapi
+python-dotenv
