@@ -59,4 +59,4 @@ Replace `user_email` with their email and `unix_username` with their unix userna
 
 ### Step 8: Chill
 
-After you have set this up, please setup nginx for user routing (pls wait im uploading the tutorial on GitHub)
+After you have set this up, please setup [nginx for user routing](https://github.com/tobycm/nginx-code-server-router/)
