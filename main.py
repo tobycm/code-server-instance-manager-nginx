@@ -209,7 +209,13 @@ async def callback(code: str):
     await asyncio.sleep(1)
 
     # redirect user to code-server
-    return HTMLResponse(TEMPLATE_HTML.replace("%pls-replace-me%", session_id))
+    return HTMLResponse(
+        TEMPLATE_HTML.replace(
+            "%pls-replace-me%", session_id
+        ).replace(
+            "%vscode_domain%", os.getenv("VSCODE_DOMAIN")
+        )
+    )
 
 @app.post("/get_cookie")
 async def get_cookie(session_id: str, auth: str):
