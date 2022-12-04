@@ -15,11 +15,11 @@
             const expire_days = 2;
             date.setTime(date.getTime() + (expire_days * 24 * 60 * 60 * 1000));
             let expires = "expires="+ date.toUTCString();
-            document.cookie = "session_id=" + session_id + ";" + expires + ";domain=.tobycm.ga;path=/";
+            document.cookie = "session_id=" + session_id + ";" + expires + ";domain=%vscode_domain%;path=/";
         }
 
         function redirectUser() {
-            window.location.replace("https://vscode.tobycm.ga");
+            window.location.replace("%vscode_domain%");
         }
 
         function load() {
