@@ -1,5 +1,7 @@
 # code-server Instance Manager
 
+# Breaking right now, please wait until further notice
+
 (lots of tech debts incoming)
 
 ## How to setup
@@ -35,9 +37,9 @@ cp users.example.json users.json
 
 (just use adduser)
 
-### Step 4.6: Ask for their Google Account email (sry I didn't implement GitHub)
+### Step 4.6: Ask for their Google Account email (sorry I didn't implement GitHub)
 
-(just hop on Discord or smth)
+(just hop on Discord or something)
 
 ### Step 4.9: Add them to users.json
 

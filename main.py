@@ -5,7 +5,6 @@ A FastApi server with Google OAuth2 that
 can manage code-server instances
 """
 
-import asyncio
 import json
 import os
 from string import ascii_letters, digits
@@ -85,6 +84,10 @@ api_scopes = [
     "https://www.googleapis.com/auth/userinfo.profile",
     "openid"
 ]
+
+VSCODE_DOMAIN = os.getenv("VSCODE_DOMAIN")
+API_PASSWD = os.getenv("API_PASSWD")
+
 REDIRECT_URI = f"https://{os.getenv('OAUTH2_DOMAIN')}/oauth2/callback"
 
 def oauth2(client_secret_file: str, scopes: List[str], redirect_uri: str):
@@ -199,21 +202,16 @@ async def callback(code: str):
         session_id += choice(LETTERS_AND_DIGITS)
 
     # start code_server
-    socket_path = await start_code_server(user, session_id, os.getenv("VSCODE_DOMAIN"))
+    socket_path = await start_code_server(user, session_id, VSCODE_DOMAIN)
     socket_paths[session_id] = socket_path
 
     with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as routes:
         routes.write(json.dumps(socket_paths))
 
-    # wait a bit for code_server to be ready
-    await asyncio.sleep(1)
-
     # redirect user to code-server
     return HTMLResponse(
         TEMPLATE_HTML.replace(
             "%pls-replace-me%", session_id
-        ).replace(
-            "%vscode_domain%", os.getenv("VSCODE_DOMAIN")
         )
     )
 
@@ -223,7 +221,7 @@ async def get_cookie(session_id: str, auth: str):
     Return user code-server location based on session_id
     """
 
-    if auth != os.getenv("API_PASSWD"):
+    if auth != API_PASSWD:
         return "None"
 
     return JSONResponse({
@@ -233,4 +231,4 @@ async def get_cookie(session_id: str, auth: str):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", port = 60392)
+    uvicorn.run("main:app", uds = "/run/code_server_pm/auth-vscode.tobycm.ga.sock")

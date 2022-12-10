@@ -22,7 +22,7 @@ async def start_code_server(user: str, session_id: str, vscode_domain: str):
         ]
     )
 
-    await asyncio.sleep(4) # wait a bit for code-server to be ready
+    await asyncio.sleep(3)
 
     Popen(
         [
