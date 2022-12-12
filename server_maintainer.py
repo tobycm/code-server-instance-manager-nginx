@@ -21,13 +21,13 @@ def maintain_code_server(user, session_id, vscode_domain):
 
     shutdown_count = 0
     cookies = RequestsCookieJar()
-    cookies.set("session_id", session_id, domain="vscode.tobycm.ga")
+    cookies.set("session_id", session_id, domain=vscode_domain)
 
     while True:
         time.sleep(60)
         # get heartbeat from code-server endpoint
         heartbeat = requests.get(
-            f"https://{vscode_domain}/{session_id}/healthz", timeout=15,
+            f"https://{vscode_domain}/healthz", timeout=15,
             cookies = cookies
         ).json()
 
@@ -39,7 +39,7 @@ def maintain_code_server(user, session_id, vscode_domain):
                     ["sudo", "killall", "-u", user, "/usr/lib/code-server/lib/node"]
                 )
 
-                with open("routes.json", "r+", encoding = "utf8") as file:
+                with open("/run/code_server_pm/routes.json", "r+", encoding = "utf8") as file:
                     data: dict = json.load(file)
                     data.pop(session_id)
                     file.write(json.dumps(data))

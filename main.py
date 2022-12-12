@@ -9,7 +9,7 @@ import json
 import os
 from string import ascii_letters, digits
 from random import choice
-from subprocess import Popen
+from subprocess import Popen, DEVNULL
 from typing import List
 
 from aiohttp import ClientSession
@@ -31,36 +31,44 @@ class CApp(FastAPI):
     http_sess: ClientSession
 
 app = CApp()
+load_dotenv()
+
+OUT_PIPE = None if os.getenv("DEBUG") == "true" else DEVNULL
 
 # create folder for sockets
 Popen(
     [
         "sudo", "mkdir","/run/code_server_sockets"
-    ]
+    ],
+    stdout=OUT_PIPE
 )
 # and chmod it
 Popen(
     [
         "sudo", "chmod", "-R", "777", "/run/code_server_sockets"
-    ]
+    ],
+    stdout=OUT_PIPE
 )
 
 Popen(
     [
         "sudo", "mkdir", "/run/code_server_pm"
-    ]
+    ],
+    stdout=OUT_PIPE
 )
 
 Popen(
     [
         "sudo", "chown", f"{os.getenv('SERVER_ADMIN')}:www-data", "-R", "/run/code_server_pm"
-    ]
+    ],
+    stdout=OUT_PIPE
 )
 
 Popen(
     [
         "sudo", "chmod", "770", "/run/code_server_pm"
-    ]
+    ],
+    stdout=OUT_PIPE
 )
 
 with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as routes_f:
@@ -76,7 +84,6 @@ with open("users.json", "r", encoding = "utf8") as config:
 
 socket_paths = {}
 
-load_dotenv()
 LETTERS_AND_DIGITS = ascii_letters + digits
 SECRET_FILE = 'client_secret.json'
 api_scopes = [
@@ -86,6 +93,7 @@ api_scopes = [
 ]
 
 VSCODE_DOMAIN = os.getenv("VSCODE_DOMAIN")
+ROOT_DOMAIN = f".{VSCODE_DOMAIN[-1]}.{VSCODE_DOMAIN[-2]}"
 API_PASSWD = os.getenv("API_PASSWD")
 
 REDIRECT_URI = f"https://{os.getenv('OAUTH2_DOMAIN')}/oauth2/callback"
@@ -202,7 +210,7 @@ async def callback(code: str):
         session_id += choice(LETTERS_AND_DIGITS)
 
     # start code_server
-    socket_path = await start_code_server(user, session_id, VSCODE_DOMAIN)
+    socket_path = await start_code_server(user, session_id, VSCODE_DOMAIN, OUT_PIPE)
     socket_paths[session_id] = socket_path
 
     with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as routes:
@@ -212,6 +220,10 @@ async def callback(code: str):
     return HTMLResponse(
         TEMPLATE_HTML.replace(
             "%pls-replace-me%", session_id
+        ).replace(
+            "%root_domain%", ROOT_DOMAIN
+        ).replace(
+            "%vscode_domain%", VSCODE_DOMAIN
         )
     )
 

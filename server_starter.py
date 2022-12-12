@@ -8,7 +8,7 @@ import asyncio
 
 from server_maintainer import maintain_code_server
 
-async def start_code_server(user: str, session_id: str, vscode_domain: str):
+async def start_code_server(user: str, session_id: str, vscode_domain: str, out_pipe):
     """
     Start code-server and prepare for maintain thread
     """
@@ -19,21 +19,24 @@ async def start_code_server(user: str, session_id: str, vscode_domain: str):
         [
             "sudo", "runuser", "-l", user, "-c",
             f"code-server --socket {socket_path}"
-        ]
+        ],
+        stdout=out_pipe
     )
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(4)
 
     Popen(
         [
             "sudo", "chown", ":www-data", socket_path
-        ]
+        ],
+        stdout=out_pipe
     )
 
     Popen(
         [
             "sudo", "chmod", "770", socket_path
-        ]
+        ],
+        stdout=out_pipe
     )
 
     maintain_thread = Thread(
