@@ -93,7 +93,7 @@ api_scopes = [
 ]
 
 VSCODE_DOMAIN = os.getenv("VSCODE_DOMAIN")
-ROOT_DOMAIN = f".{VSCODE_DOMAIN[-1]}.{VSCODE_DOMAIN[-2]}"
+ROOT_DOMAIN = f".{VSCODE_DOMAIN.split('.')[-2]}.{VSCODE_DOMAIN.split('.')[-1]}"
 API_PASSWD = os.getenv("API_PASSWD")
 
 REDIRECT_URI = f"https://{os.getenv('OAUTH2_DOMAIN')}/oauth2/callback"
