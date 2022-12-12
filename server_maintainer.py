@@ -7,12 +7,12 @@ else kill
 
 import time
 import json
-from subprocess import Popen
+from subprocess import Popen, DEVNULL
 
 import requests
 from requests.cookies import RequestsCookieJar
 
-def maintain_code_server(user, session_id, vscode_domain):
+def maintain_code_server(user, session_id, vscode_domain, expire_time):
     """
     Main function of the file
 
@@ -33,10 +33,11 @@ def maintain_code_server(user, session_id, vscode_domain):
 
         # check if expired or not
         if heartbeat["status"] != "alive":
-            if shutdown_count == 30:
-                # kill code-server if expired for 30 minutes
+            if shutdown_count == expire_time:
+                # kill code-server if expired for 60 minutes
                 Popen(
-                    ["sudo", "killall", "-u", user, "/usr/lib/code-server/lib/node"]
+                    ["sudo", "killall", "-u", user, "/usr/lib/code-server/lib/node"],
+                    stdout = DEVNULL
                 )
 
                 with open("/run/code_server_pm/routes.json", "r+", encoding = "utf8") as file:
