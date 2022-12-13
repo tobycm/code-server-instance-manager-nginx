@@ -12,7 +12,7 @@ from subprocess import Popen, DEVNULL
 import requests
 from requests.cookies import RequestsCookieJar
 
-def maintain_code_server(user, session_id, vscode_domain, expire_time):
+def maintain_code_server(user, session_id, vscode_domain, root_domain, expire_time):
     """
     Main function of the file
 
@@ -21,7 +21,7 @@ def maintain_code_server(user, session_id, vscode_domain, expire_time):
 
     shutdown_count = 0
     cookies = RequestsCookieJar()
-    cookies.set("session_id", session_id, domain=vscode_domain)
+    cookies.set("session_id", session_id, domain=root_domain)
 
     while True:
         time.sleep(60)
@@ -29,7 +29,9 @@ def maintain_code_server(user, session_id, vscode_domain, expire_time):
         heartbeat = requests.get(
             f"https://{vscode_domain}/healthz", timeout=15,
             cookies = cookies
-        ).json()
+        )
+        print(heartbeat.content.decode())
+        heartbeat = heartbeat.json()
 
         # check if expired or not
         if heartbeat["status"] != "alive":

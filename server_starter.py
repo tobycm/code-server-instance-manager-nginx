@@ -8,7 +8,14 @@ import asyncio
 
 from server_maintainer import maintain_code_server
 
-async def start_code_server(user: str, session_id: str, vscode_domain: str, out_pipe, expire_time: int):
+async def start_code_server(
+    user: str,
+    session_id: str,
+    vscode_domain: str,
+    root_domain: str,
+    out_pipe,
+    expire_time: int
+):
     """
     Start code-server and prepare for maintain thread
     """
@@ -40,7 +47,7 @@ async def start_code_server(user: str, session_id: str, vscode_domain: str, out_
     )
 
     maintain_thread = Thread(
-        target=maintain_code_server, args=[user, session_id, vscode_domain, expire_time]
+        target=maintain_code_server, args=[user, session_id, vscode_domain, root_domain, expire_time]
     )
 
     maintain_thread.start()

@@ -211,7 +211,7 @@ async def callback(code: str):
         session_id += choice(LETTERS_AND_DIGITS)
 
     # start code_server
-    socket_path = await start_code_server(user, session_id, VSCODE_DOMAIN, OUT_PIPE, EXPIRE_TIME)
+    socket_path = await start_code_server(user, session_id, VSCODE_DOMAIN, ROOT_DOMAIN, OUT_PIPE, EXPIRE_TIME)
     socket_paths[session_id] = socket_path
 
     with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as routes:
