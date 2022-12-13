@@ -23,7 +23,9 @@ def maintain_code_server(user, session_id, vscode_domain, root_domain, expire_ti
     cookies = RequestsCookieJar()
     cookies.set("session_id", session_id, domain=root_domain)
 
-    while True:
+    code_server_alive = True
+
+    while code_server_alive:
         time.sleep(60)
         try:
             # get heartbeat from code-server endpoint
@@ -31,11 +33,12 @@ def maintain_code_server(user, session_id, vscode_domain, root_domain, expire_ti
                 f"https://{vscode_domain}/healthz", timeout=15,
                 cookies = cookies
             ).json()
-        except Exception as e:
-            print(e)
 
-        # check if expired or not
-        if heartbeat["status"] != "alive":
+            # check if expired or not
+            if heartbeat["status"] == "alive":
+                shutdown_count = 0
+                continue
+
             if shutdown_count == expire_time:
                 # kill code-server if expired for 60 minutes
                 Popen(
@@ -48,8 +51,8 @@ def maintain_code_server(user, session_id, vscode_domain, root_domain, expire_ti
                     data.pop(session_id)
                     file.write(json.dumps(data))
 
-                break
+                code_server_alive = False
 
             shutdown_count += 1
-        else:
-            shutdown_count = 0
+        except Exception as error:
+            print(error)
