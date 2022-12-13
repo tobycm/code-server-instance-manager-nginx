@@ -25,13 +25,14 @@ def maintain_code_server(user, session_id, vscode_domain, root_domain, expire_ti
 
     while True:
         time.sleep(60)
-        # get heartbeat from code-server endpoint
-        heartbeat = requests.get(
-            f"https://{vscode_domain}/healthz", timeout=15,
-            cookies = cookies
-        )
-        print(heartbeat.content.decode())
-        heartbeat = heartbeat.json()
+        try:
+            # get heartbeat from code-server endpoint
+            heartbeat = requests.get(
+                f"https://{vscode_domain}/healthz", timeout=15,
+                cookies = cookies
+            ).json()
+        except Exception as e:
+            print(e)
 
         # check if expired or not
         if heartbeat["status"] != "alive":
