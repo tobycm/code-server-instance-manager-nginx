@@ -29,13 +29,15 @@ def maintain_code_server(user, session_id, vscode_domain, root_domain, expire_ti
         time.sleep(60)
         try:
             # get heartbeat from code-server endpoint
-            heartbeat = requests.get(
+            response = requests.get(
                 f"https://{vscode_domain}/healthz", timeout=15,
                 cookies = cookies
-            ).json()
+            )
+            # i think .json() on this is broken so let's do it this way
+            response = json.loads(response.content.decode())
 
             # check if expired or not
-            if heartbeat["status"] == "alive":
+            if response["status"] == "alive":
                 shutdown_count = 0
                 continue
 
@@ -46,10 +48,16 @@ def maintain_code_server(user, session_id, vscode_domain, root_domain, expire_ti
                     stdout = DEVNULL
                 )
 
-                with open("/run/code_server_pm/routes.json", "r+", encoding = "utf8") as file:
-                    data: dict = json.load(file)
-                    data.pop(session_id)
-                    file.write(json.dumps(data))
+                new_routes = {}
+                # clean routes when code-server is killed
+                with open("/run/code_server_pm/routes.json", "r", encoding = "utf8") as file:
+                    current_routes: dict = json.load(file)
+                    for session_id, route in current_routes.items():
+                        if route != f"/run/code_server_sockets/{user}_code_server.sock":
+                            new_routes[session_id] = route
+
+                with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as file:
+                    file.write(json.dumps(new_routes))
 
                 code_server_alive = False
 
