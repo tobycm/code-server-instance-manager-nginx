@@ -12,7 +12,51 @@ from subprocess import Popen, DEVNULL
 import requests
 from requests.cookies import RequestsCookieJar
 
-def maintain_code_server(user, session_id, vscode_domain, root_domain, expire_time):
+def get_heartbeat(vscode_domain: str, cookies: RequestsCookieJar):
+    """
+    Get heartbeat from code_server
+    """
+    response = requests.get(
+        f"https://{vscode_domain}/healthz", timeout=15,
+        cookies = cookies
+    ).json()
+
+    # check if expired or not
+    return True if response["status"] == "alive" else False
+
+def shutdown_code_server(user: str):
+    """
+    Shutdown code_server
+    """
+
+    Popen(
+        ["sudo", "killall", "-u", user, "/usr/lib/code-server/lib/node"],
+        stdout = DEVNULL
+    )
+
+def clean_old_routes(user: str):
+    """
+    Clean old routes from routes.json file
+    """
+
+    new_routes = {}
+    # clean routes when code-server is killed
+    with open("/run/code_server_pm/routes.json", "r", encoding = "utf8") as file_read:
+        current_routes: dict = json.load(file_read)
+        for session_id, route in current_routes.items():
+            if route != f"/run/code_server_sockets/{user}_code_server.sock":
+                new_routes[session_id] = route
+
+    with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as file_write:
+        file_write.write(json.dumps(new_routes))
+
+def maintain_code_server(
+    user: str,
+    session_id: str,
+    vscode_domain: str,
+    root_domain: str,
+    expire_time: int
+):
     """
     Main function of the file
 
@@ -22,45 +66,65 @@ def maintain_code_server(user, session_id, vscode_domain, root_domain, expire_ti
     shutdown_count = 0
     cookies = RequestsCookieJar()
     cookies.set("session_id", session_id, domain=root_domain)
-
     code_server_alive = True
 
     while code_server_alive:
         time.sleep(60)
-        try:
-            # get heartbeat from code-server endpoint
-            response = requests.get(
-                f"https://{vscode_domain}/healthz", timeout=15,
-                cookies = cookies
-            )
-            # i think .json() on this is broken so let's do it this way
-            response = json.loads(response.content.decode())
+        # get heartbeat from code-server endpoint
+        heartbeat = get_heartbeat(vscode_domain, cookies)
 
-            # check if expired or not
-            if response["status"] == "alive":
-                shutdown_count = 0
-                continue
-
-            if shutdown_count == expire_time:
-                # kill code-server if expired for 60 minutes
-                Popen(
-                    ["sudo", "killall", "-u", user, "/usr/lib/code-server/lib/node"],
-                    stdout = DEVNULL
-                )
-
-                new_routes = {}
-                # clean routes when code-server is killed
-                with open("/run/code_server_pm/routes.json", "r", encoding = "utf8") as file:
-                    current_routes: dict = json.load(file)
-                    for session_id, route in current_routes.items():
-                        if route != f"/run/code_server_sockets/{user}_code_server.sock":
-                            new_routes[session_id] = route
-
-                with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as file:
-                    file.write(json.dumps(new_routes))
-
-                code_server_alive = False
-
+        if not heartbeat:
             shutdown_count += 1
-        except Exception as error:
-            print(error)
+
+        if shutdown_count == expire_time:
+            # kill code-server if expired for 60 minutes
+            shutdown_code_server(user)
+            clean_old_routes(user)
+
+            code_server_alive = False
+
+        shutdown_count += 1
+
+def debugging(
+    user: str,
+    session_id: str,
+    vscode_domain: str,
+    root_domain: str,
+    expire_time: int
+):
+    """
+    Debugging wrapper
+    """
+
+    shutdown_count = 0
+    cookies = RequestsCookieJar()
+    cookies.set("session_id", session_id, domain=root_domain)
+
+    # get heartbeat from code-server endpoint
+    heartbeat = get_heartbeat(vscode_domain, cookies)
+    print(heartbeat)
+
+    if not heartbeat:
+        shutdown_count += 1
+
+    if shutdown_count == expire_time:
+        # kill code-server if expired for 60 minutes
+        # shutdown_code_server(user)
+        clean_old_routes(user)
+
+if __name__ == "__main__":
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    VSCODE_DOMAIN = os.getenv("VSCODE_DOMAIN")
+    ROOT_DOMAIN = f".{VSCODE_DOMAIN.split('.')[-2]}.{VSCODE_DOMAIN.split('.')[-1]}"
+    EXPIRE_TIME = int(os.getenv("EXPIRE_TIME"))
+
+    debugging(
+        input("Input your user name: "),
+        input("Input your session id: "),
+        VSCODE_DOMAIN,
+        ROOT_DOMAIN,
+        EXPIRE_TIME
+    )
