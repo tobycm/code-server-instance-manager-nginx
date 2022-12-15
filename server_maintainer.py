@@ -85,33 +85,6 @@ def maintain_code_server(
 
         shutdown_count += 1
 
-def debugging(
-    user: str,
-    session_id: str,
-    vscode_domain: str,
-    root_domain: str,
-    expire_time: int
-):
-    """
-    Debugging wrapper
-    """
-
-    shutdown_count = 0
-    cookies = RequestsCookieJar()
-    cookies.set("session_id", session_id, domain=root_domain)
-
-    # get heartbeat from code-server endpoint
-    heartbeat = get_heartbeat(vscode_domain, cookies)
-    print(heartbeat)
-
-    if not heartbeat:
-        shutdown_count += 1
-
-    if shutdown_count == expire_time:
-        # kill code-server if expired for 60 minutes
-        # shutdown_code_server(user)
-        clean_old_routes(user)
-
 if __name__ == "__main__":
     import os
     from dotenv import load_dotenv
@@ -121,7 +94,7 @@ if __name__ == "__main__":
     ROOT_DOMAIN = f".{VSCODE_DOMAIN.split('.')[-2]}.{VSCODE_DOMAIN.split('.')[-1]}"
     EXPIRE_TIME = int(os.getenv("EXPIRE_TIME"))
 
-    debugging(
+    maintain_code_server(
         input("Input your user name: "),
         input("Input your session id: "),
         VSCODE_DOMAIN,
