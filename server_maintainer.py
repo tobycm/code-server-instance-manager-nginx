@@ -9,16 +9,21 @@ import time
 import json
 from subprocess import Popen, DEVNULL
 
+import urllib.parse
 import requests
-from requests.cookies import RequestsCookieJar
+import requests_unixsocket
 
-def get_heartbeat(vscode_domain: str, cookies: RequestsCookieJar):
+requests_unixsocket.monkeypatch()
+
+def get_heartbeat(user: str):
     """
     Get heartbeat from code_server
     """
+    
+    socket_path = f"/run/code_server_sockets/{user}_code_server.sock"
+    
     response = requests.get(
-        f"https://{vscode_domain}/healthz", timeout=15,
-        cookies = cookies
+        f"http+unix://{urllib.parse.quote(socket_path, safe = '')}/healthz", timeout=15
     ).json()
 
     # check if expired or not
@@ -50,13 +55,7 @@ def clean_old_routes(user: str):
     with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as file_write:
         file_write.write(json.dumps(new_routes))
 
-def maintain_code_server(
-    user: str,
-    session_id: str,
-    vscode_domain: str,
-    root_domain: str,
-    expire_time: int
-):
+def maintain_code_server(user: str, expire_time: int):
     """
     Main function of the file
 
@@ -64,14 +63,12 @@ def maintain_code_server(
     """
 
     shutdown_count = 0
-    cookies = RequestsCookieJar()
-    cookies.set("session_id", session_id, domain=root_domain)
     code_server_alive = True
 
     while code_server_alive:
         time.sleep(60)
         # get heartbeat from code-server endpoint
-        heartbeat = get_heartbeat(vscode_domain, cookies)
+        heartbeat = get_heartbeat(user)
 
         if not heartbeat:
             shutdown_count += 1
@@ -90,14 +87,10 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
 
-    VSCODE_DOMAIN = os.getenv("VSCODE_DOMAIN")
-    ROOT_DOMAIN = f".{VSCODE_DOMAIN.split('.')[-2]}.{VSCODE_DOMAIN.split('.')[-1]}"
     EXPIRE_TIME = int(os.getenv("EXPIRE_TIME"))
+    USER = input("Input your user name: ")
 
     maintain_code_server(
-        input("Input your user name: "),
-        input("Input your session id: "),
-        VSCODE_DOMAIN,
-        ROOT_DOMAIN,
-        EXPIRE_TIME
+        user = USER,
+        expire_time = EXPIRE_TIME
     )

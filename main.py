@@ -15,8 +15,6 @@ from typing import List
 from aiohttp import ClientSession
 from dotenv import load_dotenv
 
-from google_auth_oauthlib.flow import Flow
-
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
@@ -86,10 +84,8 @@ socket_paths = {}
 
 LETTERS_AND_DIGITS = ascii_letters + digits
 SECRET_FILE = 'client_secret.json'
-api_scopes = [
-    'https://www.googleapis.com/auth/userinfo.email',
-    "https://www.googleapis.com/auth/userinfo.profile",
-    "openid"
+SCOPES = [
+    "user:email"
 ]
 
 VSCODE_DOMAIN = os.getenv("VSCODE_DOMAIN")
@@ -99,54 +95,56 @@ EXPIRE_TIME = int(os.getenv("EXPIRE_TIME"))
 
 REDIRECT_URI = f"https://{os.getenv('OAUTH2_DOMAIN')}/oauth2/callback"
 
-def oauth2(client_secret_file: str, scopes: List[str], redirect_uri: str):
+GITHUB = "https://github.com"
+GITHUB_API = "https://api.github.com"
+
+GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
+GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
+
+def generate_oauth2():
     """
     Return an authorization url for user to authenticate
     """
 
-    # Use the client_secret.json file to identify the application requesting
-    # authorization. The client ID (from that file) and access scopes are required.
-    flow = Flow.from_client_secrets_file(
-        client_secret_file,
-        scopes=scopes
-    )
-
-    # Indicate where the API server will redirect the user after the user completes
-    # the authorization flow. The redirect URI is required. The value must exactly
-    # match one of the authorized redirect URIs for the OAuth 2.0 client, which you
-    # configured in the API Console. If this value doesn't match an authorized URI,
-    # you will get a 'redirect_uri_mismatch' error.
-    flow.redirect_uri = redirect_uri
-
-    # Generate URL for request to Google's OAuth 2.0 server.
-    # Use kwargs to set optional request parameters.
-    authorization_url, _ = flow.authorization_url(
-        # Enable offline access so that you can refresh an access token without
-        # re-prompting the user for permission. Recommended for web server apps.
-        access_type='offline',
-        # Enable incremental authorization. Recommended as a best practice.
-        include_granted_scopes='true'
-    )
-    # return auth url
+    authorization_url = "".join([
+        f"{GITHUB}/login/oauth/authorize?",
+        f"client_id={GITHUB_CLIENT_ID}&",
+        f"redirect_uri={REDIRECT_URI}&",
+        f"scope={' '.join(SCOPES)}&"
+    ])
     return authorization_url
 
-def exchange_code(client_secret_file: str, scopes: List[str], redirect_uri: str, code: str):
+async def exchange_code(code: str):
     """
     Exchange OAuth2 code for user token
     """
 
-    # make a flow with credentials from secret file
-    flow = Flow.from_client_secrets_file(
-        client_secret_file,
-        scopes = scopes
-    )
-    # set redirect uri
-    flow.redirect_uri = redirect_uri
+    async with app.http_sess.get(
+        url = "".join([
+            f"{GITHUB}/login/oauth/access_token?" +
+            f"client_id={GITHUB_CLIENT_ID}&" +
+            f"client_secret={GITHUB_CLIENT_SECRET}&" +
+            f"code={code}&" +
+            f"redirect_uri={REDIRECT_URI}",
+        ]),
+        headers = {"Accept": "application/json"}
+    ) as response:
+        result = await response.json()
+        return result["access_token"]
 
-    # fetch token in exchange for code
-    flow.fetch_token(code = code)
-    # return user credentials
-    return flow.credentials
+async def get_user_emails(access_token: str) -> List[dict]:
+    """
+    Get all emails of user
+    """
+
+    async with app.http_sess.get(
+        url = f"{GITHUB_API}/user/emails",
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}"
+        }
+    ) as response:
+        return await response.json()
 
 @app.on_event("startup")
 async def startup_event():
@@ -166,12 +164,8 @@ async def main_login():
     """
 
     return RedirectResponse(
-        url = oauth2(
-            SECRET_FILE,
-            api_scopes,
-            REDIRECT_URI
-        ),
-        status_code=302
+        url = generate_oauth2(),
+        status_code = 302
     )
 
 @app.get("/oauth2/callback")
@@ -187,24 +181,27 @@ async def callback(code: str):
     """
 
     # exchange code for credential
-    credential = exchange_code(SECRET_FILE, api_scopes, REDIRECT_URI, code)
-    access_token = str(credential.token)
+    access_token = await exchange_code(code)
 
-    # make api call to google for email
-    async with app.http_sess.get(
-        url = "https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + access_token
-    ) as response:
-        data = await response.json()
-        email = data["email"]
+    # make api call to github for email
+    emails = await get_user_emails(access_token)
+    print(emails)
 
-    # check email for username
-    user_data = allowed_users.get(email)
+    exists = False
 
-    if user_data is None:
+    for email in emails:
+        # check email for username
+        user_data = allowed_users.get(email.get("email"))
+
+        if user_data is not None:
+            exists = True
+            break
+    if not exists:
         return "None"
 
     # get user's username
     user = user_data["name"]
+
     # create a path prefix
     session_id = ""
     for _ in range(64):
@@ -212,12 +209,9 @@ async def callback(code: str):
 
     # start code_server
     socket_path = await start_code_server(
-        user,
-        session_id,
-        VSCODE_DOMAIN,
-        ROOT_DOMAIN,
-        OUT_PIPE,
-        EXPIRE_TIME
+        user = user,
+        out_pipe = OUT_PIPE,
+        expire_time = EXPIRE_TIME
     )
     socket_paths[session_id] = socket_path
 

@@ -1,7 +1,5 @@
 # code-server Instance Manager
 
-# Breaking right now, please wait until further notice
-
 (lots of tech debts incoming)
 
 ## How to setup
@@ -35,7 +33,7 @@ cp users.example.json users.json
 
 ### Step 4.3: Create unix users
 
-(just use adduser)
+(just use `adduser`)
 
 ### Step 4.6: Ask for their Google Account email (sorry I didn't implement GitHub)
 
@@ -55,7 +53,19 @@ Replace `user_email` with their email and `unix_username` with their unix userna
 
 `VSCODE_DOMAIN`: domain that point to nginx in order to route requests (can leave this blank atm)
 
-### Step 6: Acquire Google OAuth2 client secret on Google Cloud Dashboard and save it in here as `client_secret.json`
+`EXPIRE_TIME`: minutes after code-server expired to shutdown
+
+### Step 6: Acquire GitHub OAuth2 client ID and secret
+
+After you have acquired these sacred objects please put them in the following order (in `.env`):
+
+`GITHUB_CLIENT_ID`: GitHub client ID
+
+`GITHUB_CLIENT_SECRET`: GitHub client secret
+
+### Step outside and enjoy the sunlight view
+
+You can set `DEBUG` to true if you want Popen's logs to output to stdout
 
 ### Step 7: Watch [this](youtube.com/watch?v=dQw4w9WgXcQ)
 
