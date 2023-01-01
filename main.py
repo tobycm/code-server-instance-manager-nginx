@@ -190,7 +190,6 @@ async def callback(code: str):
 
     # make api call to github for email
     emails = await get_user_emails(access_token)
-    print(emails)
 
     exists = False
 
