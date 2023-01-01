@@ -20,7 +20,8 @@ async def start_code_server(user: str, out_pipe, expire_time: int):
             "sudo", "runuser", "-l", user, "-c",
             f"code-server --socket {socket_path}"
         ],
-        stdout=out_pipe
+        stdout=out_pipe,
+        stderr=out_pipe
     )
 
     await asyncio.sleep(4)
@@ -29,14 +30,16 @@ async def start_code_server(user: str, out_pipe, expire_time: int):
         [
             "sudo", "chown", ":www-data", socket_path
         ],
-        stdout=out_pipe
+        stdout=out_pipe,
+        stderr=out_pipe
     )
 
     Popen(
         [
             "sudo", "chmod", "770", socket_path
         ],
-        stdout=out_pipe
+        stdout=out_pipe,
+        stderr=out_pipe
     )
 
     maintain_thread = Thread(
