@@ -1,6 +1,7 @@
 aiohttp
 google_auth_oauthlib
 uvicorn
+websockets
 fastapi
 python-dotenv
 requests-unixsocket
