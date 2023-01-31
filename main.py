@@ -19,7 +19,8 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 
-from server_starter import start_code_server
+from modules.server_starter import start_code_server
+from modules.oauth2 import generate_oauth2_url, github_oauth2
 
 class CApp(FastAPI):
     """
@@ -33,50 +34,6 @@ load_dotenv()
 
 OUT_PIPE = None if os.getenv("DEBUG") == "true" else DEVNULL
 
-# create folder for sockets
-Popen(
-    [
-        "sudo", "mkdir","/run/code_server_sockets"
-    ],
-    stdout=OUT_PIPE,
-    stderr=OUT_PIPE
-)
-# and chmod it
-Popen(
-    [
-        "sudo", "chmod", "-R", "777", "/run/code_server_sockets"
-    ],
-    stdout=OUT_PIPE,
-    stderr=OUT_PIPE
-)
-
-Popen(
-    [
-        "sudo", "mkdir", "/run/code_server_pm"
-    ],
-    stdout=OUT_PIPE,
-    stderr=OUT_PIPE
-)
-
-Popen(
-    [
-        "sudo", "chown", f"{os.getenv('SERVER_ADMIN')}:www-data", "-R", "/run/code_server_pm"
-    ],
-    stdout=OUT_PIPE,
-    stderr=OUT_PIPE
-)
-
-Popen(
-    [
-        "sudo", "chmod", "-R", "770", "/run/code_server_pm"
-    ],
-    stdout=OUT_PIPE,
-    stderr=OUT_PIPE
-)
-
-with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as routes_f:
-    routes_f.write("{}")
-
 # read HTML template
 with open("response.html", "r", encoding = "utf8") as template_html:
     TEMPLATE_HTML = template_html.read()
@@ -89,67 +46,12 @@ socket_paths = {}
 
 LETTERS_AND_DIGITS = ascii_letters + digits
 SECRET_FILE = 'client_secret.json'
-SCOPES = [
-    "user:email"
-]
+
 
 VSCODE_DOMAIN = os.getenv("VSCODE_DOMAIN")
 ROOT_DOMAIN = f".{VSCODE_DOMAIN.split('.')[-2]}.{VSCODE_DOMAIN.split('.')[-1]}"
 API_PASSWD = os.getenv("API_PASSWD")
 EXPIRE_TIME = int(os.getenv("EXPIRE_TIME"))
-
-REDIRECT_URI = f"https://{os.getenv('OAUTH2_DOMAIN')}/oauth2/callback"
-
-GITHUB = "https://github.com"
-GITHUB_API = "https://api.github.com"
-
-GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
-GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
-
-def generate_oauth2():
-    """
-    Return an authorization url for user to authenticate
-    """
-
-    authorization_url = "".join([
-        f"{GITHUB}/login/oauth/authorize?",
-        f"client_id={GITHUB_CLIENT_ID}&",
-        f"redirect_uri={REDIRECT_URI}&",
-        f"scope={' '.join(SCOPES)}&"
-    ])
-    return authorization_url
-
-async def exchange_code(code: str):
-    """
-    Exchange OAuth2 code for user token
-    """
-
-    async with app.http_sess.get(
-        url = "".join([
-            f"{GITHUB}/login/oauth/access_token?" +
-            f"client_id={GITHUB_CLIENT_ID}&" +
-            f"client_secret={GITHUB_CLIENT_SECRET}&" +
-            f"code={code}&" +
-            f"redirect_uri={REDIRECT_URI}",
-        ]),
-        headers = {"Accept": "application/json"}
-    ) as response:
-        result = await response.json()
-        return result["access_token"]
-
-async def get_user_emails(access_token: str) -> List[dict]:
-    """
-    Get all emails of user
-    """
-
-    async with app.http_sess.get(
-        url = f"{GITHUB_API}/user/emails",
-        headers = {
-            "Accept": "application/json",
-            "Authorization": f"Bearer {access_token}"
-        }
-    ) as response:
-        return await response.json()
 
 @app.on_event("startup")
 async def startup_event():
@@ -169,7 +71,20 @@ async def main_login():
     """
 
     return RedirectResponse(
-        url = generate_oauth2(),
+        url = generate_oauth2_url(),
+        status_code = 302
+    )
+
+@app.get("/reset_session")
+async def main_login():
+    """
+    Login
+
+    Redirect user to login with Google for OAuth2
+    """
+
+    return RedirectResponse(
+        url = generate_oauth2_url(redirect_uri_extension="reset_session"),
         status_code = 302
     )
 
@@ -185,26 +100,7 @@ async def callback(code: str):
     Return URL to use code-server
     """
 
-    # exchange code for credential
-    access_token = await exchange_code(code)
-
-    # make api call to github for email
-    emails = await get_user_emails(access_token)
-
-    exists = False
-
-    for email in emails:
-        # check email for username
-        user_data = allowed_users.get(email.get("email"))
-
-        if user_data is not None:
-            exists = True
-            break
-    if not exists:
-        return "None"
-
-    # get user's username
-    user = user_data["name"]
+    user = await github_oauth2(app, code, allowed_users)
 
     # create a path prefix
     session_id = ""
@@ -224,29 +120,22 @@ async def callback(code: str):
 
     # redirect user to code-server
     return HTMLResponse(
-        TEMPLATE_HTML.replace(
-            "%pls-replace-me%", session_id
-        ).replace(
-            "%root_domain%", ROOT_DOMAIN
-        ).replace(
-            "%vscode_domain%", VSCODE_DOMAIN
-        )
+        TEMPLATE_HTML.replace("%pls-replace-me%", session_id).replace("%root_domain%", ROOT_DOMAIN).replace("%vscode_domain%", VSCODE_DOMAIN)
     )
 
-@app.post("/get_cookie")
-async def get_cookie(session_id: str, auth: str):
+@app.get("/oauth2/callback/reset_session")
+async def reset_session(code: str):
     """
-    Return user code-server location based on session_id
+    Auth user through oauth2 and reset session
     """
-
-    if auth != API_PASSWD:
-        return "None"
-
-    return JSONResponse({
-        "session_id": session_id,
-        "socket_path": socket_paths.get(session_id)
-    })
-
+    
+    user = await github_oauth2(app, code, allowed_users)
+    for session_id, socket_path in socket_paths.items():
+        if socket_path == f"/run/code_server_sockets/{user}_code_server.sock":
+            socket_paths.pop(session_id)
+    
+    with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as routes:
+        routes.write(json.dumps(socket_paths))
 
 if __name__ == "__main__":
     uvicorn.run("main:app", uds = "/run/code_server_pm/auth-vscode.tobycm.ga.sock")
