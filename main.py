@@ -42,11 +42,42 @@ with open("response.html", "r", encoding = "utf8") as template_html:
 with open("users.json", "r", encoding = "utf8") as config:
     allowed_users: dict = json.load(config)
 
+Popen(
+    [
+        "sudo", "mkdir", "/run/code_server_pm"
+    ],
+    stdout = OUT_PIPE,
+    stderr = OUT_PIPE
+)
+
+
+Popen(
+    [
+        "sudo", "chown", "toby:www-data", "-R", "/run/code_server_pm"
+    ],
+    stdout = OUT_PIPE,
+    stderr = OUT_PIPE
+)
+
+Popen(
+    [
+        "sudo", "mkdir", "/run/code_server_sockets"
+    ],
+    stdout = OUT_PIPE,
+    stderr = OUT_PIPE
+)
+
+Popen(
+    [
+        "sudo", "chown", "toby:www-data", "-R", "/run/code_server_sockets"
+    ],
+    stdout = OUT_PIPE,
+    stderr = OUT_PIPE
+)
+
 socket_paths = {}
 
 LETTERS_AND_DIGITS = ascii_letters + digits
-SECRET_FILE = 'client_secret.json'
-
 
 VSCODE_DOMAIN = os.getenv("VSCODE_DOMAIN")
 ROOT_DOMAIN = f".{VSCODE_DOMAIN.split('.')[-2]}.{VSCODE_DOMAIN.split('.')[-1]}"
@@ -128,12 +159,12 @@ async def reset_session(code: str):
     """
     Auth user through oauth2 and reset session
     """
-    
+
     user = await github_oauth2(app, code, allowed_users)
     for session_id, socket_path in socket_paths.items():
         if socket_path == f"/run/code_server_sockets/{user}_code_server.sock":
             socket_paths.pop(session_id)
-    
+
     with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as routes:
         routes.write(json.dumps(socket_paths))
 

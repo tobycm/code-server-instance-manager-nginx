@@ -6,7 +6,7 @@ from subprocess import Popen
 from threading import Thread
 import asyncio
 
-from server_maintainer import maintain_code_server
+from .server_maintainer import maintain_code_server
 
 async def start_code_server(user: str, out_pipe, expire_time: int):
     """
