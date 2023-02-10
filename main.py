@@ -75,6 +75,10 @@ Popen(
     stderr = OUT_PIPE
 )
 
+# flush socket routes
+with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as file:
+    file.write("{}")
+
 socket_paths = {}
 
 LETTERS_AND_DIGITS = ascii_letters + digits
