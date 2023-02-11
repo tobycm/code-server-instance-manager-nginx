@@ -72,7 +72,7 @@ def maintain_code_server(user: str, expire_time: int):
             # get heartbeat from code-server endpoint
             heartbeat = get_heartbeat(user)
         except requests.exceptions.ConnectionError:
-            pass
+            continue
             
         if not heartbeat:
             shutdown_count += 1

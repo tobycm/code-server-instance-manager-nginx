@@ -9,18 +9,18 @@ import json
 import os
 from string import ascii_letters, digits
 from random import choice
-from subprocess import Popen, DEVNULL
-from typing import List
+from subprocess import DEVNULL
 
 from aiohttp import ClientSession
 from dotenv import load_dotenv
 
 import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 
 from modules.server_starter import start_code_server
 from modules.oauth2 import generate_oauth2_url, github_oauth2
+from modules.startup_tasks import startup_tasks
 
 class CApp(FastAPI):
     """
@@ -34,6 +34,19 @@ load_dotenv()
 
 OUT_PIPE = None if os.getenv("DEBUG") == "true" else DEVNULL
 
+startup_tasks(OUT_PIPE)
+
+socket_paths = {}
+
+LETTERS_AND_DIGITS = ascii_letters + digits
+
+VSCODE_DOMAIN = os.getenv("VSCODE_DOMAIN")
+if VSCODE_DOMAIN is None:
+    exit("VSCODE_DOMAIN is not set")
+
+ROOT_DOMAIN = f".{VSCODE_DOMAIN.split('.')[-2]}.{VSCODE_DOMAIN.split('.')[-1]}"
+EXPIRE_TIME = int(os.getenv("EXPIRE_TIME", "30"))
+
 # read HTML template
 with open("response.html", "r", encoding = "utf8") as template_html:
     TEMPLATE_HTML = template_html.read()
@@ -41,52 +54,6 @@ with open("response.html", "r", encoding = "utf8") as template_html:
 # read users' local usernames
 with open("users.json", "r", encoding = "utf8") as config:
     allowed_users: dict = json.load(config)
-
-Popen(
-    [
-        "sudo", "mkdir", "/run/code_server_pm"
-    ],
-    stdout = OUT_PIPE,
-    stderr = OUT_PIPE
-)
-
-
-Popen(
-    [
-        "sudo", "chown", "toby:www-data", "-R", "/run/code_server_pm"
-    ],
-    stdout = OUT_PIPE,
-    stderr = OUT_PIPE
-)
-
-Popen(
-    [
-        "sudo", "mkdir", "/run/code_server_sockets"
-    ],
-    stdout = OUT_PIPE,
-    stderr = OUT_PIPE
-)
-
-Popen(
-    [
-        "sudo", "chown", "toby:www-data", "-R", "/run/code_server_sockets"
-    ],
-    stdout = OUT_PIPE,
-    stderr = OUT_PIPE
-)
-
-# flush socket routes
-with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as file:
-    file.write("{}")
-
-socket_paths = {}
-
-LETTERS_AND_DIGITS = ascii_letters + digits
-
-VSCODE_DOMAIN = os.getenv("VSCODE_DOMAIN")
-ROOT_DOMAIN = f".{VSCODE_DOMAIN.split('.')[-2]}.{VSCODE_DOMAIN.split('.')[-1]}"
-API_PASSWD = os.getenv("API_PASSWD")
-EXPIRE_TIME = int(os.getenv("EXPIRE_TIME"))
 
 @app.on_event("startup")
 async def startup_event():
@@ -111,7 +78,7 @@ async def main_login():
     )
 
 @app.get("/reset_session")
-async def main_login():
+async def reset_login():
     """
     Login
 
@@ -151,7 +118,7 @@ async def callback(code: str):
     socket_paths[session_id] = socket_path
 
     with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as routes:
-        routes.write(json.dumps(socket_paths))
+        json.dump(socket_paths, routes)
 
     # redirect user to code-server
     return HTMLResponse(
@@ -170,7 +137,7 @@ async def reset_session(code: str):
             socket_paths.pop(session_id)
 
     with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as routes:
-        routes.write(json.dumps(socket_paths))
+        json.dump(socket_paths, routes)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", uds = "/run/code_server_pm/auth-vscode.tobycm.ga.sock")

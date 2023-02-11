@@ -163,3 +163,4 @@ cython_debug/
 
 client_secret.json
 users.json
+pyrightconfig.json
