@@ -42,10 +42,10 @@ async def start_code_server(user: str, out_pipe, expire_time: int):
         stderr=out_pipe
     )
 
-    maintain_thread = Thread(
-        target=maintain_code_server, args=[user, expire_time]
-    )
+    # maintain_thread = Thread(
+    #     target=maintain_code_server, args=[user, expire_time]
+    # )
 
-    maintain_thread.start()
+    # maintain_thread.start()
 
     return socket_path

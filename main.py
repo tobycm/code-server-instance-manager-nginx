@@ -64,6 +64,15 @@ async def startup_event():
     # create session to reuse
     app.http_sess = ClientSession()
 
+@app.on_event("shutdown")
+async def shutdown_event():
+    """
+    Shutdown tasks
+    """
+
+    # close session
+    await app.http_sess.close()
+
 @app.get("/")
 async def main_login():
     """

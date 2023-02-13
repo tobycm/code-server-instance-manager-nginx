@@ -43,5 +43,5 @@ def startup_tasks(OUT_PIPE):
         stderr=OUT_PIPE
     )
 
-    with open("/run/code_server_pm/routes.json", "w", encoding = "utf8") as routes_f:
+    with open("/run/code_server_pm/routes.json", "w+", encoding = "utf8") as routes_f:
         routes_f.write("{}")
