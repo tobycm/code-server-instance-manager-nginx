@@ -5,3 +5,4 @@ websockets
 fastapi
 python-dotenv
 requests-unixsocket
+aiofiles
