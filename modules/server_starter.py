@@ -24,7 +24,7 @@ async def start_code_server(user: str, out_pipe, expire_time: int):
     )
 
     while True:
-        if os.path.isfile(socket_path):
+        if os.path.exists(socket_path):
             break
         await asyncio.sleep(0.1)
 

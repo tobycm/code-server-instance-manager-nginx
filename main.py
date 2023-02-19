@@ -131,7 +131,7 @@ async def callback(code: str):
     async with aiofiles.open(
         "/run/code_server_pm/routes.json", "w", encoding="utf8"
     ) as routes:
-        json.dump(socket_paths, routes)
+        await routes.write(json.dumps(socket_paths))
 
     # redirect user to code-server
     return HTMLResponse(
@@ -155,7 +155,7 @@ async def reset_session(code: str):
     async with aiofiles.open(
         "/run/code_server_pm/routes.json", "w", encoding="utf8"
     ) as routes:
-        json.dump(socket_paths, routes)
+        await routes.write(json.dumps(socket_paths))
 
 
 if __name__ == "__main__":
