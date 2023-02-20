@@ -9,7 +9,6 @@ import json
 import os
 from string import ascii_letters, digits
 from random import choice
-from subprocess import DEVNULL
 
 import aiofiles
 from aiohttp import ClientSession
@@ -35,9 +34,7 @@ class CApp(FastAPI):
 app = CApp()
 load_dotenv()
 
-OUT_PIPE = None if os.getenv("DEBUG") == "true" else DEVNULL
-
-startup_tasks(OUT_PIPE)
+startup_tasks()
 
 socket_paths = {}
 
@@ -49,6 +46,9 @@ if VSCODE_DOMAIN is None:
 
 ROOT_DOMAIN = f".{VSCODE_DOMAIN.split('.')[-2]}.{VSCODE_DOMAIN.split('.')[-1]}"
 EXPIRE_TIME = int(os.getenv("EXPIRE_TIME", "30"))
+
+SOCKET_FOLDER = os.getenv("SOCKET_FOLDER", "/run/code_server_sockets")
+API_FOLDER = os.getenv("API_FOLDER", "/run/code_server_pm")
 
 # read HTML template
 with open("response.html", "r", encoding="utf8") as template_html:
@@ -123,13 +123,11 @@ async def callback(code: str):
         session_id += choice(LETTERS_AND_DIGITS)
 
     # start code_server
-    socket_path = await start_code_server(
-        user=user, out_pipe=OUT_PIPE, expire_time=EXPIRE_TIME
-    )
+    socket_path = await start_code_server(user=user, expire_time=EXPIRE_TIME)
     socket_paths[session_id] = socket_path
 
     async with aiofiles.open(
-        "/run/code_server_pm/routes.json", "w", encoding="utf8"
+        API_FOLDER + "/routes.json", "w", encoding="utf8"
     ) as routes:
         await routes.write(json.dumps(socket_paths))
 
@@ -149,14 +147,14 @@ async def reset_session(code: str):
 
     user = await github_oauth2(app, code, allowed_users)
     for session_id, socket_path in socket_paths.items():
-        if socket_path == f"/run/code_server_sockets/{user}_code_server.sock":
+        if socket_path == f"{SOCKET_FOLDER}/{user}_code_server.sock":
             socket_paths.pop(session_id)
 
     async with aiofiles.open(
-        "/run/code_server_pm/routes.json", "w", encoding="utf8"
+        API_FOLDER + "/routes.json", "w", encoding="utf8"
     ) as routes:
         await routes.write(json.dumps(socket_paths))
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", uds="/run/code_server_pm/auth-vscode.tobycm.ga.sock")
+    uvicorn.run("main:app", uds=API_FOLDER + "/auth-vscode.tobycm.ga.sock")
