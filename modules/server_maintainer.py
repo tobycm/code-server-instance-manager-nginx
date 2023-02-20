@@ -5,11 +5,11 @@ Do stuff like check if still living
 else kill
 """
 
-import time
 import json
-from subprocess import Popen, DEVNULL
-
+import time
 import urllib.parse
+from subprocess import DEVNULL, Popen
+
 import requests
 import requests_unixsocket
 
@@ -92,6 +92,7 @@ def maintain_code_server(user: str, expire_time: int):
 
 if __name__ == "__main__":
     import os
+
     from dotenv import load_dotenv
 
     load_dotenv()

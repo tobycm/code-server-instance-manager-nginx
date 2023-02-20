@@ -2,10 +2,11 @@
 Handle code-server startup and Caddyfile routing
 """
 
+import asyncio
 import os
 from subprocess import Popen
 from threading import Thread
-import asyncio
+
 from dotenv import load_dotenv
 
 load_dotenv()

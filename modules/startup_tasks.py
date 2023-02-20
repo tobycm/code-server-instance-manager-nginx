@@ -1,6 +1,7 @@
-from subprocess import Popen
-from dotenv import load_dotenv
 import os
+from subprocess import Popen
+
+from dotenv import load_dotenv
 
 load_dotenv()
 

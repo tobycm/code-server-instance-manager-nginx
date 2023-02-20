@@ -7,19 +7,18 @@ can manage code-server instances
 
 import json
 import os
-from string import ascii_letters, digits
 from random import choice
+from string import ascii_letters, digits
 
 import aiofiles
+import uvicorn
 from aiohttp import ClientSession
 from dotenv import load_dotenv
-
-import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
-from modules.server_starter import start_code_server
 from modules.oauth2 import generate_oauth2_url, github_oauth2
+from modules.server_starter import start_code_server
 from modules.startup_tasks import startup_tasks
 
 
