@@ -39,11 +39,6 @@ socket_paths = {}
 
 LETTERS_AND_DIGITS = ascii_letters + digits
 
-VSCODE_DOMAIN = os.getenv("VSCODE_DOMAIN")
-if VSCODE_DOMAIN is None:
-    exit("VSCODE_DOMAIN is not set")
-
-ROOT_DOMAIN = f".{VSCODE_DOMAIN.split('.')[-2]}.{VSCODE_DOMAIN.split('.')[-1]}"
 EXPIRE_TIME = int(os.getenv("EXPIRE_TIME", "30"))
 
 SOCKET_FOLDER = os.getenv("SOCKET_FOLDER", "/run/code_server_sockets")
@@ -131,11 +126,7 @@ async def callback(code: str):
         await routes.write(json.dumps(socket_paths))
 
     # redirect user to code-server
-    return HTMLResponse(
-        TEMPLATE_HTML.replace("%pls-replace-me%", session_id)
-        .replace("%root_domain%", ROOT_DOMAIN)
-        .replace("%vscode_domain%", VSCODE_DOMAIN)
-    )
+    return HTMLResponse(TEMPLATE_HTML.replace("%pls-replace-me%", session_id))
 
 
 @app.get("/oauth2/callback/reset_session")

@@ -23,6 +23,8 @@ async def start_code_server(user: str, expire_time: int):
 
     socket_path = f"{SOCKET_FOLDER}/{user}_code_server.sock"
 
+    Popen(["sudo", "rm", "-f", socket_path])
+
     Popen(["sudo", "runuser", "-l", user, "-c", f"code-server --socket {socket_path}"])
 
     while True:
