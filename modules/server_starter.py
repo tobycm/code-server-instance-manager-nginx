@@ -32,6 +32,9 @@ async def start_code_server(user: str, expire_time: int):
             break
         await asyncio.sleep(0.1)
 
+    # sleep for 2 more seconds to make sure code-server is ready
+    await asyncio.sleep(2)
+
     Popen(["sudo", "chown", ":www-data", socket_path])
 
     Popen(["sudo", "chmod", "770", socket_path])
