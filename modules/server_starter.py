@@ -14,6 +14,7 @@ load_dotenv()
 from .server_maintainer import maintain_code_server
 
 SOCKET_FOLDER = os.getenv("SOCKET_FOLDER", "/run/code_server_sockets")
+API_FOLDER = os.getenv("API_FOLDER", "/run/code_server_pm")
 
 
 async def start_code_server(user: str, expire_time: int):
@@ -27,13 +28,8 @@ async def start_code_server(user: str, expire_time: int):
 
     Popen(["sudo", "runuser", "-l", user, "-c", f"code-server --socket {socket_path}"])
 
-    while True:
-        if os.path.exists(socket_path):
-            break
+    while not os.path.exists(socket_path):
         await asyncio.sleep(0.1)
-
-    # sleep for 2 more seconds to make sure code-server is ready
-    await asyncio.sleep(2)
 
     Popen(["sudo", "chown", ":www-data", socket_path])
 
@@ -44,6 +40,8 @@ async def start_code_server(user: str, expire_time: int):
         args=(
             user,
             expire_time,
+            socket_path,
+            API_FOLDER + "/routes.json",
         ),
     )
 
