@@ -35,8 +35,6 @@ load_dotenv()
 
 startup_tasks()
 
-socket_paths = {}
-
 LETTERS_AND_DIGITS = ascii_letters + digits
 
 EXPIRE_TIME = int(os.getenv("EXPIRE_TIME", "30"))
@@ -110,6 +108,15 @@ async def callback(code: str):
     """
 
     user = await github_oauth2(app, code, allowed_users)
+
+    async with aiofiles.open(
+        API_FOLDER + "/routes.json", "r", encoding="utf8"
+    ) as routes:
+        socket_paths = json.loads(await routes.read())
+
+    for session_id, socket_path in socket_paths.items():
+        if socket_path == f"{SOCKET_FOLDER}/{user}_code_server.sock":
+            return HTMLResponse(TEMPLATE_HTML.replace("%pls-replace-me%", session_id))
 
     # create a path prefix
     session_id = ""

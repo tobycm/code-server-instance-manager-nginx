@@ -1,0 +1,16 @@
+{
+	// See https://go.microsoft.com/fwlink/?LinkId=827846 to learn about workspace recommendations.
+	// Extension identifier format: ${publisher}.${name}. Example: vscode.csharp
+	// List of extensions which should be recommended for users of this workspace.
+	"recommendations": [
+		"ms-python.black-formatter",
+		"magicstack.MagicPython",
+		"ms-pyright.pyright",
+		"ms-python.python",
+		"virgilsisoe.python-auto-import",
+		"donjayamanne.python-environment-manager",
+		"mgesbert.python-path"
+	],
+	// List of extensions recommended by VS Code that should not be recommended for users of this workspace.
+	"unwantedRecommendations": []
+}

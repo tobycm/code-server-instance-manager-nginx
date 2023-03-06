@@ -3,9 +3,7 @@ Handle code-server startup and Caddyfile routing
 """
 
 import asyncio
-import grp
 import os
-import pwd
 from subprocess import Popen
 from threading import Thread
 
@@ -26,27 +24,15 @@ async def start_code_server(user: str, expire_time: int):
 
     socket_path = f"{SOCKET_FOLDER}/{user}_code_server.sock"
 
-    Popen(["sudo", "rm", "-f", socket_path])
-
     Popen(["sudo", "runuser", "-l", user, "-c", f"code-server --socket {socket_path}"])
-
-    user_id = pwd.getpwnam(user).pw_uid
-    www_data_group_id = grp.getgrnam("www-data").gr_gid
 
     while not os.path.exists(socket_path):
         await asyncio.sleep(0.1)
 
-    while True:
-        socket_file_stat = os.stat(socket_path)
-        if (socket_file_stat.st_gid == www_data_group_id) and (
-            socket_file_stat.st_uid == user_id
-        ):
-            break
+    await asyncio.sleep(2)
 
-        Popen(["sudo", "chown", ":www-data", socket_path])
-        Popen(["sudo", "chmod", "770", socket_path])
-
-        await asyncio.sleep(0.25)
+    Popen(["sudo", "chown", ":www-data", socket_path])
+    Popen(["sudo", "chmod", "770", socket_path])
 
     maintain_thread = Thread(
         target=maintain_code_server,
