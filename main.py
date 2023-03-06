@@ -147,4 +147,4 @@ async def reset_session(code: str):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", uds=API_FOLDER + "/auth-vscode.tobycm.ga.sock")
+    uvicorn.run("main:app", uds=API_FOLDER + "/auth-vsus.tobycm.ga.sock")
