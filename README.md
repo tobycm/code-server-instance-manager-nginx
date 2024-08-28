@@ -67,7 +67,7 @@ After you have acquired these sacred objects please put them in the following or
 
 You can set `DEBUG` to true if you want Popen's logs to output to stdout
 
-### Step 7: Watch [this](youtube.com/watch?v=dQw4w9WgXcQ)
+### Step 7: Watch [this](https://youtube.com/watch?v=dQw4w9WgXcQ)
 
 ### Step 8: Chill
 
